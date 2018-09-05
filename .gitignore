@@ -8,3 +8,6 @@ build
 
 # Mac OSX
 .DS_Store
+
+# Dir
+/data
