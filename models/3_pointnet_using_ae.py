@@ -1,3 +1,4 @@
+# Created by Yujing on 18/8/27
 import tensorflow as tf
 import numpy as np
 import math
