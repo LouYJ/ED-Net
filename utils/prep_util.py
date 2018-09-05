@@ -269,25 +269,34 @@ def rotate_point_cloud_h5(out_dir, h5_file, rand=1, degree=0):
     if not (os.path.exists(out_dir)):
     	os.mkdir(out_dir)
 
-    rotated_data_x = rotate_point_cloud(pc, 'x', rand, degree)
-    rotated_data_y = rotate_point_cloud(pc, 'y', rand, degree)
-    rotated_data_z = rotate_point_cloud(pc, 'z', rand, degree)
+    if rand == 1:
+        rotated_data = rotate_point_cloud(pc)
+        save_h5_seg(rotated_data,
+                    data['label'],
+                    data['pid'],
+                    os.path.join(out_dir, h5_file[:-3]+'_rand'+'.h5'))
+        print ('Random rotate ' + h5_file + ' successfully!')
 
-    save_h5_seg(rotated_data_x,
-                data['label'],
-                data['pid'],
-                os.path.join(out_dir, h5_file[:-3]+'_x'+str(degree)+'.h5'))
-    print ('Write ' + h5_file[:-3]+'_x'+str(degree)+'.h5' + ' successfully!')
-    save_h5_seg(rotated_data_y,
-                data['label'],
-                data['pid'],
-                os.path.join(out_dir, h5_file[:-3]+'_y'+str(degree)+'.h5'))
-    print ('Write ' + h5_file[:-3]+'_y'+str(degree)+'.h5' + ' successfully!')
-    save_h5_seg(rotated_data_z,
-                data['label'],
-                data['pid'],
-                os.path.join(out_dir, h5_file[:-3]+'_z'+str(degree)+'.h5'))
-    print ('Write ' + h5_file[:-3]+'_z'+str(degree)+'.h5' + ' successfully!')
+    else:
+        rotated_data_x = rotate_point_cloud(pc, 'x', rand, degree)
+        rotated_data_y = rotate_point_cloud(pc, 'y', rand, degree)
+        rotated_data_z = rotate_point_cloud(pc, 'z', rand, degree)
+
+        save_h5_seg(rotated_data_x,
+                    data['label'],
+                    data['pid'],
+                    os.path.join(out_dir, h5_file[:-3]+'_x'+str(degree)+'.h5'))
+        print ('Write ' + h5_file[:-3]+'_x'+str(degree)+'.h5' + ' successfully!')
+        save_h5_seg(rotated_data_y,
+                    data['label'],
+                    data['pid'],
+                    os.path.join(out_dir, h5_file[:-3]+'_y'+str(degree)+'.h5'))
+        print ('Write ' + h5_file[:-3]+'_y'+str(degree)+'.h5' + ' successfully!')
+        save_h5_seg(rotated_data_z,
+                    data['label'],
+                    data['pid'],
+                    os.path.join(out_dir, h5_file[:-3]+'_z'+str(degree)+'.h5'))
+        print ('Write ' + h5_file[:-3]+'_z'+str(degree)+'.h5' + ' successfully!')
 
 # 19/9/5 Yujing: Modify the rotation function to realize xyz random rotation.
 def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
@@ -304,7 +313,8 @@ def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
         center = np.mean(shape_pc, axis=0)
         shape_moved = shape_pc - center
 
-        print('Center of shape_moved: 'np.mean(shape_moved, axis=0))
+        # print(shape_moved.shape)
+        # print('Center of shape_moved: ', np.mean(shape_moved, axis=0))
 
         if (rand == 1):
             rotation_angle_x = np.random.uniform() * 2 * np.pi
@@ -315,7 +325,7 @@ def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
                                 [0, np.sin(rotation_angle_x), np.cos(rotation_angle_x)]])
 
             matrix_y = np.array([[np.cos(rotation_angle_y), 0, np.sin(rotation_angle_y)],
-                                [0, 1, 0]
+                                [0, 1, 0],
                                 [-np.sin(rotation_angle_y), 0, np.cos(rotation_angle_y)]])
 
             matrix_z = np.array([[np.cos(rotation_angle_z), -np.sin(rotation_angle_z), 0],
@@ -323,7 +333,7 @@ def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
                                 [0, 0, 1]])
 
             shape_moved_rotated = np.dot(np.dot(np.dot(shape_moved, matrix_x.T), matrix_y.T), matrix_z.T)
-            print('Center of shape_moved_rotated: ', np.mean(shape_moved_rotated, axis=0))
+            # print('Center of shape_moved_rotated: ', np.mean(shape_moved_rotated, axis=0))
             shape_rotated = shape_moved_rotated + center
 
         else:
@@ -541,16 +551,21 @@ if __name__ == '__main__':
     # make_h5('./model_2048', './seg_2048', './label.txt', 'origin.h5')
     # divide_data('./origin.h5')
 
-    '''
     file_list = os.listdir('.')
     for file in file_list:
-        if ('.h5' in file) and (len(file) == 17 or len(file) == 16):
+        # if ('.h5' in file) and (len(file) == 17 or len(file) == 16):
+        if ('.h5' in file) and (len(file) == 18):
             # delete_cat([4, 15], file)
             print ('----------Start '+file+'----------')
-            rotate_point_cloud_h5('rotated_data', file, rand=0, degree=30)
-            rotate_point_cloud_h5('rotated_data', file, rand=0, degree=60)
-            rotate_point_cloud_h5('rotated_data', file, rand=0, degree=90)
+            rotate_point_cloud_h5('random0', file)
 	    print ('----------Finish '+file+'----------')
+
+    '''------
+    f = h5py.File('ply_data_train0.h5')
+    pc = f['data'][0]
+    pc = np.array([pc])
+    print pc
+    rotate_point_cloud(pc)
     '''
     
 
