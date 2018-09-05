@@ -162,6 +162,27 @@ def save_h5_seg(data, label, pid, h5_filename, data_dtype='float32', label_dtype
             dtype=pid_dtype)
     h5_fout.close()
 
+# 18/9/5 Yujing: Store rotation label into h5 file.
+def save_h5_norm(data, label, pid, norm_data, h5_filename, data_dtype='float32', label_dtype='uint8', pid_dtype='uint8', norm_data_dtype='float32'):
+    h5_fout = h5py.File(h5_filename)
+    h5_fout.create_dataset(
+            'data', data=data,
+            compression='gzip', compression_opts=4,
+            dtype=data_dtype)
+    h5_fout.create_dataset(
+            'label', data=label,
+            compression='gzip', compression_opts=1,
+            dtype=label_dtype)
+    h5_fout.create_dataset(
+            'pid', data=pid,
+            compression='gzip', compression_opts=1,
+            dtype=pid_dtype)
+    h5_fout.create_dataset(
+            'norm_data', data=norm_data,
+            compression='gzip', compression_opts=4,
+            dtype=norm_data_dtype)
+    h5_fout.close()
+
 def make_h5(model_path, seg_path, label_path, h5_filename, data_dtype='float32', label_dtype='uint8', pid_dtype='uint8'):
     model_lists = os.listdir(model_path)
     seg_lists = os.listdir(seg_path)
@@ -262,6 +283,8 @@ def delete_cat(categories, data_file):
                 new_data['pid'],
                 'new_' + data_file)
 
+
+
 def rotate_point_cloud_h5(out_dir, h5_file, rand=1, degree=0):
     data = h5py.File(h5_file)
     pc = data['data']
@@ -271,9 +294,10 @@ def rotate_point_cloud_h5(out_dir, h5_file, rand=1, degree=0):
 
     if rand == 1:
         rotated_data = rotate_point_cloud(pc)
-        save_h5_seg(rotated_data,
+        save_h5_norm(rotated_data,
                     data['label'],
                     data['pid'],
+                    pc,
                     os.path.join(out_dir, h5_file[:-3]+'_rand'+'.h5'))
         print ('Random rotate ' + h5_file + ' successfully!')
 
@@ -553,8 +577,7 @@ if __name__ == '__main__':
 
     file_list = os.listdir('.')
     for file in file_list:
-        # if ('.h5' in file) and (len(file) == 17 or len(file) == 16):
-        if ('.h5' in file) and (len(file) == 18):
+        if ('.h5' in file) and (len(file) == 17 or len(file) == 16 or len(file) == 18):
             # delete_cat([4, 15], file)
             print ('----------Start '+file+'----------')
             rotate_point_cloud_h5('random0', file)

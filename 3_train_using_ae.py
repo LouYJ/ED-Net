@@ -68,7 +68,7 @@ BN_DECAY_CLIP = 0.99
 TRAIN_FILES = provider.getDataFiles( \
     os.path.join(BASE_DIR, 'data/modelpose/train_files.txt'))
 TEST_FILES = provider.getDataFiles(\
-    os.path.join(BASE_DIR, 'data/modelpose/train_files.txt'))
+    os.path.join(BASE_DIR, 'data/modelpose/val_files.txt'))
 
 
 def log_string(out_str):
@@ -154,7 +154,7 @@ def train():
             sys.stdout.flush()
              
             train_one_epoch(sess, ops, train_writer, epoch)
-            # eval_one_epoch(sess, ops, test_writer)
+            eval_one_epoch(sess, ops, test_writer)
             log_string('************ EPOCH %03d Finished ************' % (epoch))
             
             # Save the variables to disk.
@@ -177,7 +177,8 @@ def train_one_epoch(sess, ops, train_writer, epoch):
     
     for fn in range(len(TRAIN_FILES)):
         log_string('>>>>> File' + str(fn) + ': ' + TRAIN_FILES[train_file_idxs[fn]] + ' >>>>>')
-        current_data, current_label, current_angle = provider.loadDataFile_with_angle(TRAIN_FILES[train_file_idxs[fn]])
+        # 18/9/5 Yujing: Temporarily neglect the angle.
+        current_data, current_label, _ = provider.loadDataFile_with_angle(TRAIN_FILES[train_file_idxs[fn]])
         current_data = current_data[:,0:NUM_POINT,:]
         gt_data = np.zeros([current_data.shape[0], 2048, 3])
         gt_data[:] = current_data[0]
@@ -210,39 +211,38 @@ def train_one_epoch(sess, ops, train_writer, epoch):
     log_string('The mean loss of this epoch: {0}\n'.format(epoch_loss/len(TRAIN_FILES)))
 
         
-def eval_one_epoch(sess, ops, test_writer):
+def eval_one_epoch(sess, ops, test_writer, epoch_num):
     """ ops: dict mapping from string to tf ops """
     is_training = False
-    total_correct = 0
-    total_seen = 0
-    loss_sum = 0
-    total_seen_class = [0 for _ in range(NUM_CLASSES)]
-    total_correct_class = [0 for _ in range(NUM_CLASSES)]
 
     # Shuffle train files
     test_file_idxs = np.arange(0, len(TEST_FILES))
     np.random.shuffle(test_file_idxs)
+    loss_sum = 0
     
     for fn in range(len(TEST_FILES)):
-        log_string('----' + str(fn) + '-----')
-        current_data, current_label, current_angle = provider.loadDataFile_with_angle(TEST_FILES[test_file_idxs[fn]])
+        log_string('===== === Evaluation for epoch {0} === =====\n'.format(epoch_num))
+        log_string('>>>>> File' + str(fn) + ': ' + TRAIN_FILES[train_file_idxs[fn]] + ' >>>>>')
+        current_data, current_label, current_norm = provider.loadDataFile_with_norm(TEST_FILES[test_file_idxs[fn]])
         current_data = current_data[:,0:NUM_POINT,:]
         
         file_size = current_data.shape[0]
         num_batches = file_size // BATCH_SIZE
+        file_loss = 0
         
         for batch_idx in range(num_batches):
             start_idx = batch_idx * BATCH_SIZE
             end_idx = (batch_idx+1) * BATCH_SIZE
 
             feed_dict = {ops['pointclouds_pl']: current_data[start_idx:end_idx, :, :],
-                         ops['labels_pl']: current_angle[start_idx:end_idx],
+                         ops['labels_pl']: current_norm[start_idx:end_idx, ...],
                          ops['is_training_pl']: is_training}
             summary, step, loss_val, pred_val = sess.run([ops['merged'], ops['step'], ops['loss'], ops['pred']], feed_dict=feed_dict)
-            total_seen += BATCH_SIZE
-            loss_sum += (loss_val*BATCH_SIZE)
+            file_loss += loss_val
+        loss_sum += file_loss
+        log_string('Mean loss of file {0}: {1}'.format(fn, file_loss/num_batches))
             
-    log_string('eval mean loss: %f' % (loss_sum / float(total_seen)))
+    log_string('<<<<< Evaluation mean loss: {0} <<<<<\n'.format(loss_sum / len(TEST_FILES)))
          
 
 
