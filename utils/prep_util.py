@@ -289,7 +289,7 @@ def rotate_point_cloud_h5(out_dir, h5_file, rand=1, degree=0):
                 os.path.join(out_dir, h5_file[:-3]+'_z'+str(degree)+'.h5'))
     print ('Write ' + h5_file[:-3]+'_z'+str(degree)+'.h5' + ' successfully!')
 
-
+# 19/9/5 Yujing: Modify the rotation function to realize xyz random rotation.
 def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
     """ Randomly rotate the point clouds to augument the dataset
         rotation is per shape based along up direction
@@ -300,29 +300,52 @@ def rotate_point_cloud(batch_data, axis='z', rand=1, degree=0):
     """
     rotated_data = np.zeros(batch_data.shape, dtype=np.float32)
     for k in range(batch_data.shape[0]):
+        shape_pc = batch_data[k, ...]
+        center = np.mean(shape_pc, axis=0)
+        shape_moved = shape_pc - center
+
+        print('Center of shape_moved: 'np.mean(shape_moved, axis=0))
+
         if (rand == 1):
-            rotation_angle = np.random.uniform() * 2 * np.pi
+            rotation_angle_x = np.random.uniform() * 2 * np.pi
+            rotation_angle_y = np.random.uniform() * 2 * np.pi
+            rotation_angle_z = np.random.uniform() * 2 * np.pi
+            matrix_x = np.array([[1, 0, 0],
+                                [0, np.cos(rotation_angle_x), -np.sin(rotation_angle_x)],
+                                [0, np.sin(rotation_angle_x), np.cos(rotation_angle_x)]])
+
+            matrix_y = np.array([[np.cos(rotation_angle_y), 0, np.sin(rotation_angle_y)],
+                                [0, 1, 0]
+                                [-np.sin(rotation_angle_y), 0, np.cos(rotation_angle_y)]])
+
+            matrix_z = np.array([[np.cos(rotation_angle_z), -np.sin(rotation_angle_z), 0],
+                                [np.sin(rotation_angle_z), np.cos(rotation_angle_z), 0], 
+                                [0, 0, 1]])
+
+            shape_moved_rotated = np.dot(np.dot(np.dot(shape_moved, matrix_x.T), matrix_y.T), matrix_z.T)
+            print('Center of shape_moved_rotated: ', np.mean(shape_moved_rotated, axis=0))
+            shape_rotated = shape_moved_rotated + center
+
         else:
             rotation_angle = degree/180.0*np.pi
 
-        cosval = np.cos(rotation_angle)
-        sinval = np.sin(rotation_angle)
+            cosval = np.cos(rotation_angle)
+            sinval = np.sin(rotation_angle)
 
-        if (axis == 'x'):
-            rotation_matrix = np.array([[1, 0, 0],
-                                        [0, cosval, -sinval],
-                                        [0, sinval, cosval]])
-        elif (axis == 'y'):
-            rotation_matrix = np.array([[cosval, 0, sinval],
-                                        [0, 1, 0],
-                                        [-sinval, 0, cosval]])
-        else:
-            rotation_matrix = np.array([[cosval, -sinval, 0],
-                                        [sinval, cosval, 0],
-                                        [0, 0, 1]])        
-
-        shape_pc = batch_data[k, ...]
-        rotated_data[k, ...] = np.dot(shape_pc.reshape((-1, 3)), rotation_matrix)
+            if (axis == 'x'):
+                rotation_matrix = np.array([[1, 0, 0],
+                                            [0, cosval, -sinval],
+                                            [0, sinval, cosval]])
+            elif (axis == 'y'):
+                rotation_matrix = np.array([[cosval, 0, sinval],
+                                            [0, 1, 0],
+                                            [-sinval, 0, cosval]])
+            else:
+                rotation_matrix = np.array([[cosval, -sinval, 0],
+                                            [sinval, cosval, 0],
+                                            [0, 0, 1]])        
+            shape_rotated = np.dot(shape_pc.reshape((-1, 3)), rotation_matrix)
+        rotated_data[k, ...] = shape_rotated
     return rotated_data
 
 
@@ -518,7 +541,7 @@ if __name__ == '__main__':
     # make_h5('./model_2048', './seg_2048', './label.txt', 'origin.h5')
     # divide_data('./origin.h5')
 
-    
+    '''
     file_list = os.listdir('.')
     for file in file_list:
         if ('.h5' in file) and (len(file) == 17 or len(file) == 16):
@@ -528,6 +551,7 @@ if __name__ == '__main__':
             rotate_point_cloud_h5('rotated_data', file, rand=0, degree=60)
             rotate_point_cloud_h5('rotated_data', file, rand=0, degree=90)
 	    print ('----------Finish '+file+'----------')
+    '''
     
 
 
