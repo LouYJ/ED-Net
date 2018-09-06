@@ -112,12 +112,12 @@ def train():
                 optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=MOMENTUM)
             elif OPTIMIZER == 'adam':
                 optimizer = tf.train.AdamOptimizer(learning_rate)
-            train_op = optimizer.minimize(loss, global_step=batch)
 
             # Get model and loss 
             pred = MODEL.get_model(pointclouds_pl, is_training_pl, bn_decay=bn_decay)
             pred = tf.squeeze(pred, axis=None, name=None)
             loss = MODEL.get_loss(pred, labels_pl)
+            train_op = optimizer.minimize(loss, global_step=batch)
             
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
@@ -152,10 +152,9 @@ def train():
         for epoch in range(MAX_EPOCH):
             log_string('************ EPOCH %03d ************' % (epoch))
             sys.stdout.flush()
-             
+            eval_one_epoch(sess, ops, test_writer, epoch)
             train_one_epoch(sess, ops, train_writer, epoch)
-            eval_one_epoch(sess, ops, test_writer)
-            log_string('************ EPOCH %03d Finished ************' % (epoch))
+            log_string('************ EPOCH %03d Finished ************\n' % (epoch))
             
             # Save the variables to disk.
             if (epoch+1) % 10 == 0:
@@ -186,7 +185,7 @@ def train_one_epoch(sess, ops, train_writer, epoch):
         
         file_size = current_data.shape[0]
         num_batches = file_size // BATCH_SIZE
-        log_string('Batch number: %d' % num_batches)
+        # log_string('Batch number: %d' % num_batches)
         
         loss_sum_file = 0
         for batch_idx in range(num_batches):
@@ -203,7 +202,7 @@ def train_one_epoch(sess, ops, train_writer, epoch):
         
         mean_loss = loss_sum_file / float(num_batches)
         log_string('Mean loss: {0}'.format(mean_loss))
-        log_string('<<<<< File{0}'.format(fn) + ' of epoch {0}/{1} <<<<<\n'.format(epoch, MAX_EPOCH))
+        log_string('File{0}'.format(fn) + ' of epoch {0}/{1}\n'.format(epoch, MAX_EPOCH))
         epoch_loss += mean_loss
 
     time_end=time.time()
@@ -222,7 +221,7 @@ def eval_one_epoch(sess, ops, test_writer, epoch_num):
     
     for fn in range(len(TEST_FILES)):
         log_string('===== === Evaluation for epoch {0} === =====\n'.format(epoch_num))
-        log_string('>>>>> File' + str(fn) + ': ' + TRAIN_FILES[train_file_idxs[fn]] + ' >>>>>')
+        log_string('>>>>> File' + str(fn) + ': ' + TEST_FILES[test_file_idxs[fn]] + ' >>>>>')
         current_data, current_label, current_norm = provider.loadDataFile_with_norm(TEST_FILES[test_file_idxs[fn]])
         current_data = current_data[:,0:NUM_POINT,:]
         
@@ -239,7 +238,7 @@ def eval_one_epoch(sess, ops, test_writer, epoch_num):
                          ops['is_training_pl']: is_training}
             summary, step, loss_val, pred_val = sess.run([ops['merged'], ops['step'], ops['loss'], ops['pred']], feed_dict=feed_dict)
             file_loss += loss_val
-        loss_sum += file_loss
+        loss_sum += file_loss/num_batches
         log_string('Mean loss of file {0}: {1}'.format(fn, file_loss/num_batches))
             
     log_string('<<<<< Evaluation mean loss: {0} <<<<<\n'.format(loss_sum / len(TEST_FILES)))
