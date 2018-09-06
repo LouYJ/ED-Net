@@ -19,7 +19,6 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', type=int, default=0, help='GPU to use [default: GPU 0]')
 parser.add_argument('--model', type=str, default='3_pointnet_using_ae', help='Model name: pointnet_using_ae [default: pointnet_using_ae]')
-parser.add_argument('--log_dir', default='log', help='Log dir [default: log]')
 parser.add_argument('--num_point', type=int, default=2048, help='Point Number [256/512/1024/2048] [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=200, help='Epoch to run [default: 200]')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
@@ -34,7 +33,6 @@ FLAGS = parser.parse_args()
 # SCRIPT
 GPU_INDEX = FLAGS.gpu
 MODEL = importlib.import_module(FLAGS.model) # import network module
-LOG_DIR = FLAGS.log_dir
 NUM_POINT = FLAGS.num_point
 MAX_EPOCH = FLAGS.max_epoch
 BATCH_SIZE = FLAGS.batch_size
@@ -46,15 +44,13 @@ DECAY_RATE = FLAGS.decay_rate
 OUTPUT_DIR = FLAGS.output_dir
 
 MODEL_FILE = os.path.join(BASE_DIR, 'models', FLAGS.model+'.py')
-if not os.path.exists(LOG_DIR): 
-    os.mkdir(LOG_DIR)
 if not os.path.exists(OUTPUT_DIR):
     os.mkdir(OUTPUT_DIR)
-LOG_FOUT = open(os.path.join(LOG_DIR, 'log_train.txt'), 'w')
+LOG_FOUT = open(os.path.join(OUTPUT_DIR, 'log_train.txt'), 'w')
 LOG_FOUT.write(str(FLAGS)+'\n')
 
-# os.system('cp %s %s' % (MODEL_FILE, LOG_DIR)) # bkp of model def
-# os.system('cp train.py %s' % (LOG_DIR)) # bkp of train procedure
+# os.system('cp %s %s' % (MODEL_FILE, OUTPUT_DIR)) # bkp of model def
+# os.system('cp train.py %s' % (OUTPUT_DIR)) # bkp of train procedure
 
 MAX_NUM_POINT = 2048
 # NUM_CLASSES = 3
@@ -131,8 +127,8 @@ def train():
 
         # Add summary writers
         merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'train'), sess.graph)
-        test_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'test'))
+        train_writer = tf.summary.FileWriter(os.path.join(OUTPUT_DIR, 'train'), sess.graph)
+        test_writer = tf.summary.FileWriter(os.path.join(OUTPUT_DIR, 'test'))
 
         # Init variables
         init = tf.global_variables_initializer()
@@ -158,7 +154,7 @@ def train():
             
             # Save the variables to disk.
             if (epoch+1) % 10 == 0:
-                save_path = saver.save(sess, os.path.join(LOG_DIR, "model_epoch_" + str(epoch+1) + ".ckpt"))
+                save_path = saver.save(sess, os.path.join(OUTPUT_DIR, 'trained_model', "model_epoch_" + str(epoch+1) + ".ckpt"))
                 log_string("Store model successfully into file: %s" % save_path)
 
 

@@ -183,7 +183,7 @@ def deconv_upsample(inputs, factor, name, padding = 'SAME', activation_fn = None
         input_shape    = tf.shape(inputs)
         num_filters_in = inputs.get_shape()[-1].value
         output_shape   = tf.stack([input_shape[0], input_shape[1] * factor, input_shape[2] * factor, num_filters_in])
-
+       
         weights = bilinear_upsample_weights(factor, num_filters_in)
         outputs = tf.nn.conv2d_transpose(inputs, weights, output_shape, stride_shape, padding = padding)
 

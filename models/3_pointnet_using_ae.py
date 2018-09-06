@@ -37,27 +37,27 @@ def get_model(point_cloud, is_training, bn_decay=None):
     conv2_1 = layers.conv_btn(pool1,   [3, 3], 32, 'conv2_1', is_training = is_training, padding='SAME')
     conv2_2 = layers.conv_btn(conv2_1, [3, 3], 32, 'conv2_2', is_training = is_training, padding='SAME')
     pool2   = layers.maxpool(conv2_2, [2, 2],   'pool2')
-    print ('Block2: ', pool2.shape) # 256, 256, 64
+    print ('Block2: ', pool2.shape) # 128, 128, 32
 
     # Conv Block 3
     conv3_1 = layers.conv_btn(pool2,   [3, 3], 64, 'conv3_1', is_training = is_training, padding='SAME')
     conv3_2 = layers.conv_btn(conv3_1, [3, 3], 64, 'conv3_2', is_training = is_training, padding='SAME')
     pool3   = layers.maxpool(conv3_2, [2, 2],   'pool3')
-    print ('Block3: ', pool3.shape) # 128, 128, 128
+    print ('Block3: ', pool3.shape) # 64, 64, 64
 
     # Conv Block 4
     conv4_1 = layers.conv_btn(pool3,   [3, 3], 128, 'conv4_1', is_training = is_training, padding='SAME')
     conv4_2 = layers.conv_btn(conv4_1, [3, 3], 128, 'conv4_2', is_training = is_training, padding='SAME')
     conv4_3 = layers.conv_btn(conv4_2, [3, 3], 128, 'conv4_3', is_training = is_training, padding='SAME')
     pool4   = layers.maxpool(conv4_3, [2, 2],   'pool4')
-    print ('Block4: ', pool4.shape) # 64, 64, 256
+    print ('Block4: ', pool4.shape) # 32, 32, 128
 
     # FC Block
     fc5 = layers.conv_btn(pool4, [17, 17], 256, 'fc5', is_training = is_training, padding='VALID')
     drop5 = layers.dropout(fc5, dropout_keep_prob, 'drop5')
-    print ('fc5: ', drop5.shape) # 32, 32, 256
+    print ('fc5: ', drop5.shape) # 16, 16, 256
     score = layers.conv_btn(drop5, [1, 1], 50, 'score', is_training = is_training, padding='VALID')
-    print ('Score: ', score.shape) # 32, 32, 50
+    print ('Score: ', score.shape) # 16, 16, 50
     # Encdoe end
 
     # Decode start

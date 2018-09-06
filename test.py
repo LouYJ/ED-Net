@@ -7,18 +7,20 @@ import json
 import numpy as np
 import os
 import sys
+import importlib
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 sys.path.append(os.path.dirname(BASE_DIR))
+sys.path.append(os.path.join(BASE_DIR, 'models'))
 import provider
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', default='train_results/model.ckpt', help='Model checkpoint path')
+parser.add_argument('--pretrained_model', default='log/model.ckpt', help='Model checkpoint path')
 parser.add_argument('--output_dir', default='./test_results')
 FLAGS = parser.parse_args()
 
 # DEFAULT SETTINGS
-pretrained_model_path = FLAGS.model_path # os.path.join(BASE_DIR, './pretrained_model/model.ckpt')
+pretrained_model_path = FLAGS.pretrained_model # os.path.join(BASE_DIR, './pretrained_model/model.ckpt')
 output_dir = FLAGS.output_dir
 gpu_to_use = 0
 
@@ -28,6 +30,7 @@ batch_size = 1
 
 test_file_list = os.path.join(BASE_DIR, 'data/modelpose/test_files.txt')
 TEST_FILES = provider.getDataFiles(test_file_list)
+model = importlib.import_module('3_pointnet_using_ae') # import network module
 
 def printout(flog, data):
     print(data)
@@ -84,7 +87,7 @@ def predict():
         saver.restore(sess, pretrained_model_path)
         printout(flog, 'Model restored.')
 
-        batch_data = np.zeros([bacth_size, point_num, 3]).astype(np.float32)
+        batch_data = np.zeros([batch_size, point_num, 3]).astype(np.float32)
 
         total_dist= 0.
         sum_dist = 0.
@@ -100,22 +103,28 @@ def predict():
         for fn in range(len(TEST_FILES)):
             
             printout(flog, '>>>>> File' + str(fn) + ': ' + TEST_FILES[test_file_idxs[fn]] + ' >>>>>')
-            current_data, current_label, current_norm = provider.loadDataFile_with_norm(TEST_FILES[test_file_idxs[fn]])
-            current_data = current_data[:,0:NUM_POINT,:]
-        
+            # Here we use old structure of data. We will propose a new kind of data structure.
+            current_data, current_label, current_norm = provider.loadDataFile_with_angle(TEST_FILES[test_file_idxs[fn]])
+            current_data = current_data[:,0:point_num,:]
+            # ===
+            gt_data = np.zeros([current_data.shape[0], 2048, 3])
+            gt_data[:] = current_data[0]
+            # ===
+
             file_size = current_data.shape[0]
-            num_batches = file_size // BATCH_SIZE
+            num_batches = file_size // batch_size
             file_dist = 0
             num = 0
         
             for batch_idx in range(num_batches):
-                start_idx = batch_idx * BATCH_SIZE
-                end_idx = (batch_idx+1) * BATCH_SIZE
+                start_idx = batch_idx * batch_size
+                end_idx = (batch_idx+1) * batch_size
 
-                feed_dict = {pointclouds_pl: current_data[start_idx:end_idx, :, :],
-                             is_training_pl: is_training}
+                feed_dict = {pointclouds_ph: current_data[start_idx:end_idx, :, :],
+                             is_training_ph: is_training}
                 pred_val= sess.run([pred], feed_dict=feed_dict)
-                batch_dist = cal_dist(pred_val, current_norm[start_idx:end_idx, ...])
+                # batch_dist = cal_dist(pred_val, current_norm[start_idx:end_idx, ...])
+                batch_dist = cal_dist(pred_val, gt_data[start_idx:end_idx, ...])
 
                 printout(flog, 'PC {0} distance: {1}'.format(bacth_idx, batch_dist))
                 file_dist += bacth_dist
@@ -129,7 +138,7 @@ def predict():
                			   	   	   	   + pred_val[0][point_idx][1] + ' ' \
                			   	   	   	   + pred_val[0][point_idx][2] + '\n')
                 f_pcout.close()
-                num++
+                num += 1
 
             file_mean_dist = file_loss/num_batches
             printout(flog, 'File mean distance: {0}', file_mean_dist)
