@@ -16,13 +16,8 @@ if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
     os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
     os.system('rm %s' % (zipfile))
 
-# Qi 2018.7.14
-def shuffle_data_angle(data, labels, angle):
-    idx = np.arange(len(labels))
-    np.random.shuffle(idx)
-    return data[idx, ...], labels[idx], angle[idx, ...]
-
-def shuffle_data(data, labels):
+## 18/8/29 Yujing: Add encode
+def shuffle_data(data, labels, encode):
     """ Shuffle data and labels.
         Input:
           data: B,N,... numpy array
@@ -32,7 +27,7 @@ def shuffle_data(data, labels):
     """
     idx = np.arange(len(labels))
     np.random.shuffle(idx)
-    return data[idx, ...], labels[idx], idx
+    return data[idx, ...], labels[idx], encode[idx, ...], idx
 
 
 def rotate_point_cloud(batch_data):
@@ -111,6 +106,7 @@ def load_h5_data_label_seg(h5_filename):
 def loadDataFile_with_seg(filename):
     return load_h5_data_label_seg(filename)
 
+
 # Qi 2018.7.14
 def load_h5_data_label_angle(h5_filename):
     f = h5py.File(h5_filename)
@@ -121,3 +117,36 @@ def load_h5_data_label_angle(h5_filename):
 
 def loadDataFile_with_angle(filename):
     return load_h5_data_label_angle(filename)
+
+
+## 18/8/29 Yujing: Create function to load encode.
+def load_h5_data_label_seg_encode(h5_filename):
+    f = h5py.File(h5_filename)
+    data = f['data'][:]
+    label = f['label'][:]
+    seg = f['pid'][:]
+    encode = f['encode'][:]
+    return (data, label, seg, encode)
+
+def loadDataFile_with_encode(filename):
+    return load_h5_data_label_seg_encode(filename)
+
+
+def save_encode_h5(h5_filename, encode, encode_dtype='float32'):
+    h5_fout = h5py.File(h5_filename)
+    h5_fout.create_dataset(
+            'encode', data=encode,
+            compression='gzip', compression_opts=4,
+            dtype=encode_dtype)
+    h5_fout.close()
+
+# 2018/9/5 Yujing: Create function to load normal data.
+def load_h5_data_norm(h5_filename):
+    f = h5py.File(h5_filename)
+    data = f['data'][:]
+    label = f['label'][:]
+    norm = f['norm_data'][:]
+    return (data, label, norm)
+
+def loadDataFile_with_norm(filename):
+    return load_h5_data_norm(filename)

@@ -1,4 +1,6 @@
 # Created by Yujing on 18/9/3
+# 1. Evaluate the accuracy of our Encode & Decode network.
+# 2. Decode the deep feature for getting oriented point cloud.
 import argparse
 import tensorflow as tf
 import json
