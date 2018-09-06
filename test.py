@@ -106,14 +106,17 @@ def predict():
             # Here we use old structure of data. We will propose a new kind of data structure.
             current_data, current_label, current_norm = provider.loadDataFile_with_angle(TEST_FILES[test_file_idxs[fn]])
             current_data = current_data[:,0:point_num,:]
+            # print (current_data.shape)
+
             # ===
             gt_data = np.zeros([current_data.shape[0], 2048, 3])
             gt_data[:] = current_data[0]
+            # print (gt_data.shape)
             # ===
 
             file_size = current_data.shape[0]
             num_batches = file_size // batch_size
-            file_dist = 0
+            # file_dist = 0
             num = 0
         
             for batch_idx in range(num_batches):
@@ -126,22 +129,22 @@ def predict():
                 # batch_dist = cal_dist(pred_val, current_norm[start_idx:end_idx, ...])
                 batch_dist = cal_dist(pred_val, gt_data[start_idx:end_idx, ...])
 
-                printout(flog, 'PC {0} distance: {1}'.format(bacth_idx, batch_dist))
-                file_dist += bacth_dist
-                total_dist += bacth_dist
+                printout(flog, 'PC {0} distance: {1}'.format(batch_idx, batch_dist))
+                # file_dist += batch_dist
+                total_dist += batch_dist
 
                 # Restore the oriented model.
                 printout(flog, 'Store predicted point cloud into nrom_pc{0}.obj ...'.format(num))
                 f_pcout = open(os.path.join(pc_out, 'norm_pc{0}.obj'.format(num)), 'w')
-               	for point_idx in range(pred_val[0]):
-               		f_pcout.write('v ' + pred_val[0][point_idx][0] + ' ' \
-               			   	   	   	   + pred_val[0][point_idx][1] + ' ' \
-               			   	   	   	   + pred_val[0][point_idx][2] + '\n')
+                pred_val = np.array(pred_val)
+                pred_val = pred_val.reshape([batch_size, point_num, 3])
+               	for point_idx in range(pred_val.shape[1]):
+               		f_pcout.write('v ' + str(pred_val[0][point_idx][0]) + ' ' + str(pred_val[0][point_idx][1]) + ' ' + str(pred_val[0][point_idx][2]) + '\n')
                 f_pcout.close()
                 num += 1
 
-            file_mean_dist = file_loss/num_batches
-            printout(flog, 'File mean distance: {0}', file_mean_dist)
+            file_mean_dist = total_dist/num_batches
+            printout(flog, 'File mean distance: {0}'.format(file_mean_dist))
             sum_dist += file_mean_dist
             
         printout(flog, '===== Test mean distance: {0} =====\n'.format(sum_dist / len(TEST_FILES)))
