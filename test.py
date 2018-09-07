@@ -15,7 +15,7 @@ sys.path.append(os.path.join(BASE_DIR, 'models'))
 import provider
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--pretrained_model', default='log/model.ckpt', help='Model checkpoint path')
+parser.add_argument('--pretrained_model', default='train_results/trained_model/model_epoch_190.ckpt', help='Model checkpoint path')
 parser.add_argument('--output_dir', default='./test_results')
 FLAGS = parser.parse_args()
 
@@ -28,7 +28,7 @@ gpu_to_use = 0
 point_num = 2048            # the max number of points in the all testing data shapes
 batch_size = 1
 
-test_file_list = os.path.join(BASE_DIR, 'data/modelpose/test_files.txt')
+test_file_list = os.path.join(BASE_DIR, 'data/modelpose/train_files.txt')
 TEST_FILES = provider.getDataFiles(test_file_list)
 model = importlib.import_module('3_pointnet_using_ae') # import network module
 
@@ -58,7 +58,7 @@ def cal_dist(pred, norm):
 	return np.mean(np.square(pred-norm))
 
 def predict():
-    is_training = False
+    is_training = True
 
     with tf.device('/gpu:'+str(gpu_to_use)):
         pointclouds_ph, labels_ph = model.placeholder_inputs(batch_size, point_num)
@@ -126,6 +126,7 @@ def predict():
                 feed_dict = {pointclouds_ph: current_data[start_idx:end_idx, :, :],
                              is_training_ph: is_training}
                 pred_val= sess.run([pred], feed_dict=feed_dict)
+                print (pred_val)
                 # batch_dist = cal_dist(pred_val, current_norm[start_idx:end_idx, ...])
                 batch_dist = cal_dist(pred_val, gt_data[start_idx:end_idx, ...])
 
